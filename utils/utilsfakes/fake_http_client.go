@@ -10,83 +10,89 @@ import (
 )
 
 type FakeHttpClient struct {
-	DeleteStub        func(string) (*http.Response, error)
+	DeleteStub        func(string) ([]byte, error)
 	deleteMutex       sync.RWMutex
 	deleteArgsForCall []struct {
 		arg1 string
 	}
 	deleteReturns struct {
-		result1 *http.Response
+		result1 []byte
 		result2 error
 	}
 	deleteReturnsOnCall map[int]struct {
-		result1 *http.Response
+		result1 []byte
 		result2 error
 	}
-	DoStub        func(*http.Request) (*http.Response, error)
+	DoStub        func(*http.Request) ([]byte, error)
 	doMutex       sync.RWMutex
 	doArgsForCall []struct {
 		arg1 *http.Request
 	}
 	doReturns struct {
-		result1 *http.Response
+		result1 []byte
 		result2 error
 	}
 	doReturnsOnCall map[int]struct {
-		result1 *http.Response
+		result1 []byte
 		result2 error
 	}
-	GetStub        func(string) (*http.Response, error)
+	GetStub        func(string) ([]byte, error)
 	getMutex       sync.RWMutex
 	getArgsForCall []struct {
 		arg1 string
 	}
 	getReturns struct {
-		result1 *http.Response
+		result1 []byte
 		result2 error
 	}
 	getReturnsOnCall map[int]struct {
-		result1 *http.Response
+		result1 []byte
 		result2 error
 	}
-	PatchStub        func(string, io.Reader) (*http.Response, error)
+	PatchStub        func(string, io.Reader) ([]byte, error)
 	patchMutex       sync.RWMutex
 	patchArgsForCall []struct {
 		arg1 string
 		arg2 io.Reader
 	}
 	patchReturns struct {
-		result1 *http.Response
+		result1 []byte
 		result2 error
 	}
 	patchReturnsOnCall map[int]struct {
-		result1 *http.Response
+		result1 []byte
 		result2 error
 	}
-	PostStub        func(string, io.Reader) (*http.Response, error)
+	PostStub        func(string, io.Reader) ([]byte, error)
 	postMutex       sync.RWMutex
 	postArgsForCall []struct {
 		arg1 string
 		arg2 io.Reader
 	}
 	postReturns struct {
-		result1 *http.Response
+		result1 []byte
 		result2 error
 	}
 	postReturnsOnCall map[int]struct {
-		result1 *http.Response
+		result1 []byte
 		result2 error
 	}
-	RefreshAccessTokenStub        func(bool)
+	RefreshAccessTokenStub        func(bool) error
 	refreshAccessTokenMutex       sync.RWMutex
 	refreshAccessTokenArgsForCall []struct {
 		arg1 bool
+	}
+	refreshAccessTokenReturns struct {
+		result1 error
+	}
+	refreshAccessTokenReturnsOnCall map[int]struct {
+		result1 error
 	}
 	invocations      map[string][][]interface{}
 	invocationsMutex sync.RWMutex
 }
 
-func (fake *FakeHttpClient) Delete(arg1 string) (*http.Response, error) {
+func (fake *FakeHttpClient) Delete(arg1 string) ([]byte, error) {
 	fake.deleteMutex.Lock()
 	ret, specificReturn := fake.deleteReturnsOnCall[len(fake.deleteArgsForCall)]
 	fake.deleteArgsForCall = append(fake.deleteArgsForCall, struct {
@@ -110,7 +116,7 @@ func (fake *FakeHttpClient) DeleteCallCount() int {
 	return len(fake.deleteArgsForCall)
 }
 
-func (fake *FakeHttpClient) DeleteCalls(stub func(string) (*http.Response, error)) {
+func (fake *FakeHttpClient) DeleteCalls(stub func(string) ([]byte, error)) {
 	fake.deleteMutex.Lock()
 	defer fake.deleteMutex.Unlock()
 	fake.DeleteStub = stub
@@ -123,33 +129,33 @@ func (fake *FakeHttpClient) DeleteArgsForCall(i int) string {
 	return argsForCall.arg1
 }
 
-func (fake *FakeHttpClient) DeleteReturns(result1 *http.Response, result2 error) {
+func (fake *FakeHttpClient) DeleteReturns(result1 []byte, result2 error) {
 	fake.deleteMutex.Lock()
 	defer fake.deleteMutex.Unlock()
 	fake.DeleteStub = nil
 	fake.deleteReturns = struct {
-		result1 *http.Response
+		result1 []byte
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeHttpClient) DeleteReturnsOnCall(i int, result1 *http.Response, result2 error) {
+func (fake *FakeHttpClient) DeleteReturnsOnCall(i int, result1 []byte, result2 error) {
 	fake.deleteMutex.Lock()
 	defer fake.deleteMutex.Unlock()
 	fake.DeleteStub = nil
 	if fake.deleteReturnsOnCall == nil {
 		fake.deleteReturnsOnCall = make(map[int]struct {
-			result1 *http.Response
+			result1 []byte
 			result2 error
 		})
 	}
 	fake.deleteReturnsOnCall[i] = struct {
-		result1 *http.Response
+		result1 []byte
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeHttpClient) Do(arg1 *http.Request) (*http.Response, error) {
+func (fake *FakeHttpClient) Do(arg1 *http.Request) ([]byte, error) {
 	fake.doMutex.Lock()
 	ret, specificReturn := fake.doReturnsOnCall[len(fake.doArgsForCall)]
 	fake.doArgsForCall = append(fake.doArgsForCall, struct {
@@ -173,7 +179,7 @@ func (fake *FakeHttpClient) DoCallCount() int {
 	return len(fake.doArgsForCall)
 }
 
-func (fake *FakeHttpClient) DoCalls(stub func(*http.Request) (*http.Response, error)) {
+func (fake *FakeHttpClient) DoCalls(stub func(*http.Request) ([]byte, error)) {
 	fake.doMutex.Lock()
 	defer fake.doMutex.Unlock()
 	fake.DoStub = stub
@@ -186,33 +192,33 @@ func (fake *FakeHttpClient) DoArgsForCall(i int) *http.Request {
 	return argsForCall.arg1
 }
 
-func (fake *FakeHttpClient) DoReturns(result1 *http.Response, result2 error) {
+func (fake *FakeHttpClient) DoReturns(result1 []byte, result2 error) {
 	fake.doMutex.Lock()
 	defer fake.doMutex.Unlock()
 	fake.DoStub = nil
 	fake.doReturns = struct {
-		result1 *http.Response
+		result1 []byte
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeHttpClient) DoReturnsOnCall(i int, result1 *http.Response, result2 error) {
+func (fake *FakeHttpClient) DoReturnsOnCall(i int, result1 []byte, result2 error) {
 	fake.doMutex.Lock()
 	defer fake.doMutex.Unlock()
 	fake.DoStub = nil
 	if fake.doReturnsOnCall == nil {
 		fake.doReturnsOnCall = make(map[int]struct {
-			result1 *http.Response
+			result1 []byte
 			result2 error
 		})
 	}
 	fake.doReturnsOnCall[i] = struct {
-		result1 *http.Response
+		result1 []byte
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeHttpClient) Get(arg1 string) (*http.Response, error) {
+func (fake *FakeHttpClient) Get(arg1 string) ([]byte, error) {
 	fake.getMutex.Lock()
 	ret, specificReturn := fake.getReturnsOnCall[len(fake.getArgsForCall)]
 	fake.getArgsForCall = append(fake.getArgsForCall, struct {
@@ -236,7 +242,7 @@ func (fake *FakeHttpClient) GetCallCount() int {
 	return len(fake.getArgsForCall)
 }
 
-func (fake *FakeHttpClient) GetCalls(stub func(string) (*http.Response, error)) {
+func (fake *FakeHttpClient) GetCalls(stub func(string) ([]byte, error)) {
 	fake.getMutex.Lock()
 	defer fake.getMutex.Unlock()
 	fake.GetStub = stub
@@ -249,33 +255,33 @@ func (fake *FakeHttpClient) GetArgsForCall(i int) string {
 	return argsForCall.arg1
 }
 
-func (fake *FakeHttpClient) GetReturns(result1 *http.Response, result2 error) {
+func (fake *FakeHttpClient) GetReturns(result1 []byte, result2 error) {
 	fake.getMutex.Lock()
 	defer fake.getMutex.Unlock()
 	fake.GetStub = nil
 	fake.getReturns = struct {
-		result1 *http.Response
+		result1 []byte
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeHttpClient) GetReturnsOnCall(i int, result1 *http.Response, result2 error) {
+func (fake *FakeHttpClient) GetReturnsOnCall(i int, result1 []byte, result2 error) {
 	fake.getMutex.Lock()
 	defer fake.getMutex.Unlock()
 	fake.GetStub = nil
 	if fake.getReturnsOnCall == nil {
 		fake.getReturnsOnCall = make(map[int]struct {
-			result1 *http.Response
+			result1 []byte
 			result2 error
 		})
 	}
 	fake.getReturnsOnCall[i] = struct {
-		result1 *http.Response
+		result1 []byte
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeHttpClient) Patch(arg1 string, arg2 io.Reader) (*http.Response, error) {
+func (fake *FakeHttpClient) Patch(arg1 string, arg2 io.Reader) ([]byte, error) {
 	fake.patchMutex.Lock()
 	ret, specificReturn := fake.patchReturnsOnCall[len(fake.patchArgsForCall)]
 	fake.patchArgsForCall = append(fake.patchArgsForCall, struct {
@@ -300,7 +306,7 @@ func (fake *FakeHttpClient) PatchCallCount() int {
 	return len(fake.patchArgsForCall)
 }
 
-func (fake *FakeHttpClient) PatchCalls(stub func(string, io.Reader) (*http.Response, error)) {
+func (fake *FakeHttpClient) PatchCalls(stub func(string, io.Reader) ([]byte, error)) {
 	fake.patchMutex.Lock()
 	defer fake.patchMutex.Unlock()
 	fake.PatchStub = stub
@@ -313,33 +319,33 @@ func (fake *FakeHttpClient) PatchArgsForCall(i int) (string, io.Reader) {
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *FakeHttpClient) PatchReturns(result1 *http.Response, result2 error) {
+func (fake *FakeHttpClient) PatchReturns(result1 []byte, result2 error) {
 	fake.patchMutex.Lock()
 	defer fake.patchMutex.Unlock()
 	fake.PatchStub = nil
 	fake.patchReturns = struct {
-		result1 *http.Response
+		result1 []byte
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeHttpClient) PatchReturnsOnCall(i int, result1 *http.Response, result2 error) {
+func (fake *FakeHttpClient) PatchReturnsOnCall(i int, result1 []byte, result2 error) {
 	fake.patchMutex.Lock()
 	defer fake.patchMutex.Unlock()
 	fake.PatchStub = nil
 	if fake.patchReturnsOnCall == nil {
 		fake.patchReturnsOnCall = make(map[int]struct {
-			result1 *http.Response
+			result1 []byte
 			result2 error
 		})
 	}
 	fake.patchReturnsOnCall[i] = struct {
-		result1 *http.Response
+		result1 []byte
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeHttpClient) Post(arg1 string, arg2 io.Reader) (*http.Response, error) {
+func (fake *FakeHttpClient) Post(arg1 string, arg2 io.Reader) ([]byte, error) {
 	fake.postMutex.Lock()
 	ret, specificReturn := fake.postReturnsOnCall[len(fake.postArgsForCall)]
 	fake.postArgsForCall = append(fake.postArgsForCall, struct {
@@ -364,7 +370,7 @@ func (fake *FakeHttpClient) PostCallCount() int {
 	return len(fake.postArgsForCall)
 }
 
-func (fake *FakeHttpClient) PostCalls(stub func(string, io.Reader) (*http.Response, error)) {
+func (fake *FakeHttpClient) PostCalls(stub func(string, io.Reader) ([]byte, error)) {
 	fake.postMutex.Lock()
 	defer fake.postMutex.Unlock()
 	fake.PostStub = stub
@@ -377,42 +383,48 @@ func (fake *FakeHttpClient) PostArgsForCall(i int) (string, io.Reader) {
 	return argsForCall.arg1, argsForCall.arg2
 }
 
-func (fake *FakeHttpClient) PostReturns(result1 *http.Response, result2 error) {
+func (fake *FakeHttpClient) PostReturns(result1 []byte, result2 error) {
 	fake.postMutex.Lock()
 	defer fake.postMutex.Unlock()
 	fake.PostStub = nil
 	fake.postReturns = struct {
-		result1 *http.Response
+		result1 []byte
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeHttpClient) PostReturnsOnCall(i int, result1 *http.Response, result2 error) {
+func (fake *FakeHttpClient) PostReturnsOnCall(i int, result1 []byte, result2 error) {
 	fake.postMutex.Lock()
 	defer fake.postMutex.Unlock()
 	fake.PostStub = nil
 	if fake.postReturnsOnCall == nil {
 		fake.postReturnsOnCall = make(map[int]struct {
-			result1 *http.Response
+			result1 []byte
 			result2 error
 		})
 	}
 	fake.postReturnsOnCall[i] = struct {
-		result1 *http.Response
+		result1 []byte
 		result2 error
 	}{result1, result2}
 }
 
-func (fake *FakeHttpClient) RefreshAccessToken(arg1 bool) {
+func (fake *FakeHttpClient) RefreshAccessToken(arg1 bool) error {
 	fake.refreshAccessTokenMutex.Lock()
+	ret, specificReturn := fake.refreshAccessTokenReturnsOnCall[len(fake.refreshAccessTokenArgsForCall)]
 	fake.refreshAccessTokenArgsForCall = append(fake.refreshAccessTokenArgsForCall, struct {
 		arg1 bool
 	}{arg1})
 	fake.recordInvocation("RefreshAccessToken", []interface{}{arg1})
 	fake.refreshAccessTokenMutex.Unlock()
 	if fake.RefreshAccessTokenStub != nil {
-		fake.RefreshAccessTokenStub(arg1)
+		return fake.RefreshAccessTokenStub(arg1)
 	}
+	if specificReturn {
+		return ret.result1
+	}
+	fakeReturns := fake.refreshAccessTokenReturns
+	return fakeReturns.result1
 }
 
 func (fake *FakeHttpClient) RefreshAccessTokenCallCount() int {
@@ -421,7 +433,7 @@ func (fake *FakeHttpClient) RefreshAccessTokenCallCount() int {
 	return len(fake.refreshAccessTokenArgsForCall)
 }
 
-func (fake *FakeHttpClient) RefreshAccessTokenCalls(stub func(bool)) {
+func (fake *FakeHttpClient) RefreshAccessTokenCalls(stub func(bool) error) {
 	fake.refreshAccessTokenMutex.Lock()
 	defer fake.refreshAccessTokenMutex.Unlock()
 	fake.RefreshAccessTokenStub = stub
@@ -432,6 +444,29 @@ func (fake *FakeHttpClient) RefreshAccessTokenArgsForCall(i int) bool {
 	defer fake.refreshAccessTokenMutex.RUnlock()
 	argsForCall := fake.refreshAccessTokenArgsForCall[i]
 	return argsForCall.arg1
+}
+
+func (fake *FakeHttpClient) RefreshAccessTokenReturns(result1 error) {
+	fake.refreshAccessTokenMutex.Lock()
+	defer fake.refreshAccessTokenMutex.Unlock()
+	fake.RefreshAccessTokenStub = nil
+	fake.refreshAccessTokenReturns = struct {
+		result1 error
+	}{result1}
+}
+
+func (fake *FakeHttpClient) RefreshAccessTokenReturnsOnCall(i int, result1 error) {
+	fake.refreshAccessTokenMutex.Lock()
+	defer fake.refreshAccessTokenMutex.Unlock()
+	fake.RefreshAccessTokenStub = nil
+	if fake.refreshAccessTokenReturnsOnCall == nil {
+		fake.refreshAccessTokenReturnsOnCall = make(map[int]struct {
+			result1 error
+		})
+	}
+	fake.refreshAccessTokenReturnsOnCall[i] = struct {
+		result1 error
+	}{result1}
 }
 
 func (fake *FakeHttpClient) Invocations() map[string][][]interface{} {

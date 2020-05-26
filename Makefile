@@ -22,7 +22,7 @@ generate:
 	go generate ./...
 
 .PHONY: build
-build:
+build: generate
 	go build -ldflags '$(LDFLAGS)' -o pivnet-client ./entry/go-pivnet-client.go
 
 .PHONY: unit
@@ -31,10 +31,16 @@ unit:
 
 .PHONY: clean
 clean:
-	rm -f ./pivnet-client
+	rm -f ./pivnet-client ./coverage.html ./cover.out
 
 .PHONY: check
 check:
 	gofmt -w .
 	go test -cover -count=1 ./...
 	golangci-lint run -v
+
+.PHONY: cover
+cover:
+	go test -v -coverprofile=cover.out ./...
+	go tool cover -html=cover.out -o coverage.html
+	open coverage.html

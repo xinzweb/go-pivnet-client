@@ -1,11 +1,11 @@
 package config_test
 
 import (
+	"github.com/baotingfang/go-pivnet-client/api"
+	"github.com/baotingfang/go-pivnet-client/api/apifakes"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"strings"
-
-	. "github.com/baotingfang/go-pivnet-client/config"
 )
 
 var metadataYaml = `
@@ -67,8 +67,10 @@ product_files:
 var _ = Describe("Config", func() {
 	Context("Metadata config", func() {
 		It("Decode metadata config", func() {
+			api.DefaultClient = &apifakes.FakeAccessInterface{}
+
 			metadataReader := strings.NewReader(metadataYaml)
-			metaData, err := MetadataFrom(metadataReader)
+			metaData, err := api.MetadataFrom(metadataReader, "6.6.0")
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(metaData.Release.ReleaseType).To(Equal("Major Release"))

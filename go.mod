@@ -3,7 +3,7 @@ module github.com/baotingfang/go-pivnet-client
 go 1.14
 
 require (
-	github.com/greenplum-db/gp-common-go-libs v1.0.4
+	github.com/cppforlife/go-semi-semantic v0.0.0-20160921010311-576b6af77ae4
 	github.com/hashicorp/go-retryablehttp v0.6.6
 	github.com/kr/text v0.2.0 // indirect
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
