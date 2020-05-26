@@ -42,7 +42,7 @@ func init() {
 		for _, flag := range uploadCmdRequiredFlags {
 			err := uploadCmd.MarkFlagRequired(flag)
 			if err != nil {
-				vlog.Fatal(err)
+				vlog.Fatal(err.Error())
 			}
 		}
 
