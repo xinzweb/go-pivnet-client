@@ -1,8 +1,12 @@
 package config_test
 
 import (
+	"fmt"
 	"github.com/baotingfang/go-pivnet-client/api"
 	"github.com/baotingfang/go-pivnet-client/api/apifakes"
+	"github.com/baotingfang/go-pivnet-client/config"
+	"github.com/baotingfang/go-pivnet-client/utils"
+	semver "github.com/cppforlife/go-semi-semantic/version"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"strings"
@@ -65,10 +69,12 @@ product_files:
 `
 
 var _ = Describe("Config", func() {
+	BeforeEach(func() {
+		api.DefaultClient = &apifakes.FakeAccessInterface{}
+	})
+
 	Context("Metadata config", func() {
 		It("Decode metadata config", func() {
-			api.DefaultClient = &apifakes.FakeAccessInterface{}
-
 			metadataReader := strings.NewReader(metadataYaml)
 			metaData, err := api.MetadataFrom(metadataReader, "6.6.0")
 			Expect(err).NotTo(HaveOccurred())
@@ -78,6 +84,175 @@ var _ = Describe("Config", func() {
 			Expect(len(metaData.FileGroups)).To(Equal(1))
 			Expect(len(metaData.FileGroups[0].ProductFiles)).To(Equal(2))
 			Expect(len(metaData.ProductFiles)).To(Equal(2))
+		})
+	})
+
+	Context("Release business logic", func() {
+		It("ComputeReleaseType: User provided", func() {
+			inputReleaseType := []config.ReleaseType{
+				config.MinorRelease,
+				config.MinorRelease,
+				config.AlphaRelease,
+				config.BetaRelease,
+				config.MaintenanceRelease,
+			}
+
+			for _, rt := range inputReleaseType {
+				r := &config.Release{
+					ReleaseType: rt.String(),
+				}
+				t, err := r.ComputeReleaseType()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(t).To(Equal(rt.String()))
+			}
+		})
+
+		It("ComputeReleaseType: gpdb4 error version", func() {
+			inputVersions := []string{
+				"4.3.3",
+				"4.3",
+				"4.3.37.5.6",
+			}
+			for _, version := range inputVersions {
+				r := &config.Release{
+					ReleaseType: config.COMPUTED,
+					Version:     semver.MustNewVersionFromString(version),
+				}
+				t, err := r.ComputeReleaseType()
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(Equal("invalid release version for gpdb4: " + version))
+				Expect(t).To(Equal(""))
+			}
+		})
+
+		It("ComputeReleaseType: gpdb5 error version", func() {
+			inputVersions := []string{
+				"5.2",
+				"5.27.1.2",
+			}
+			for _, version := range inputVersions {
+				r := &config.Release{
+					ReleaseType: config.COMPUTED,
+					Version:     semver.MustNewVersionFromString(version),
+				}
+				t, err := r.ComputeReleaseType()
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(Equal("invalid release version for gpdb5: " + version))
+				Expect(t).To(Equal(""))
+			}
+		})
+
+		It("ComputeReleaseType: gpdb6 error version", func() {
+			inputVersions := []string{
+				"6.7.2.1",
+				"6.7",
+			}
+			for _, version := range inputVersions {
+				r := &config.Release{
+					ReleaseType: config.COMPUTED,
+					Version:     semver.MustNewVersionFromString(version),
+				}
+				t, err := r.ComputeReleaseType()
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(Equal("invalid release version for gpdb6: " + version))
+				Expect(t).To(Equal(""))
+			}
+		})
+
+		It("ComputeReleaseType: error version not gpdb4/5/6", func() {
+			inputVersions := []string{
+				"1.0.0",
+				"7.1.0",
+				"7.0.0",
+			}
+			for _, version := range inputVersions {
+				r := &config.Release{
+					ReleaseType: config.COMPUTED,
+					Version:     semver.MustNewVersionFromString(version),
+				}
+				t, err := r.ComputeReleaseType()
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(Equal("invalid gpdb release version: " + version))
+				Expect(t).To(Equal(""))
+			}
+		})
+
+		It("Test Major version", func() {
+			r := &config.Release{
+				ReleaseType: config.COMPUTED,
+			}
+
+			defer utils.TestHelper(`\[Default Logger\]\[FATAL\] can not found gpdb major version\.`)
+			_ = r.MajorVersion()
+		})
+
+		It("Test Minor version", func() {
+			r := &config.Release{
+				ReleaseType: config.COMPUTED,
+			}
+
+			defer utils.TestHelper(`\[Default Logger\]\[FATAL\] can not found gpdb minor version\.`)
+			_ = r.MinorVersion()
+		})
+
+		It("Test Patch version", func() {
+			r := &config.Release{
+				ReleaseType: config.COMPUTED,
+			}
+
+			defer utils.TestHelper(`\[Default Logger\]\[FATAL\] can not found gpdb patch version\.`)
+			_ = r.PatchVersion()
+		})
+
+		It("ComputeReleaseType: correct version", func() {
+			inputVersions := []string{
+				"4.3.3.0",
+				"4.3.3.1",
+				"4.3.3.0-alpha.1",
+				"4.3.3.0-beta.1",
+
+				"5.0.0",
+				"5.1.0",
+				"5.1.1",
+				"5.1.1-alpha.1",
+				"5.1.1-beta.1",
+
+				"6.0.0",
+				"6.1.0",
+				"6.1.1",
+				"6.1.1-alpha.1",
+				"6.1.1-beta.1",
+			}
+
+			releaseTypes := []config.ReleaseType{
+				config.MinorRelease,
+				config.MaintenanceRelease,
+				config.AlphaRelease,
+				config.BetaRelease,
+
+				config.MajorRelease,
+				config.MinorRelease,
+				config.MaintenanceRelease,
+				config.AlphaRelease,
+				config.BetaRelease,
+
+				config.MajorRelease,
+				config.MinorRelease,
+				config.MaintenanceRelease,
+				config.AlphaRelease,
+				config.BetaRelease,
+			}
+
+			for i, v := range inputVersions {
+				fmt.Printf("%d: %s\n", i, v)
+				r := &config.Release{
+					ReleaseType: config.COMPUTED,
+					Version:     semver.MustNewVersionFromString(inputVersions[i]),
+				}
+				t, err := r.ComputeReleaseType()
+				Expect(err).NotTo(HaveOccurred())
+				Expect(t).To(Equal(releaseTypes[i].String()))
+			}
 		})
 	})
 })

@@ -157,72 +157,49 @@ type ProductFileResponse struct {
 }
 
 func MetadataFrom(reader io.Reader, gpdbVersion string) (*config.Metadata, error) {
+	v, err := semver.NewVersionFromString(gpdbVersion)
+	if err != nil {
+		return &config.Metadata{}, err
+	}
 
 	var metadata config.Metadata
 	if err := yaml.NewDecoder(reader).Decode(&metadata); err != nil {
 		return &config.Metadata{}, err
 	}
 
-	v, err := semver.NewVersionFromString(gpdbVersion)
-	if err != nil {
-		return &config.Metadata{}, err
-	}
+	r := &metadata.Release
 
 	metadata.Release.Version = v
 	vlog.Info("GPDB Version: %s", v.Release.AsString())
 
-	majorVersion, err := strconv.Atoi(v.Release.Components[0].AsString())
-	if err != nil {
-		vlog.Error("covert gpdb major version failed")
-		return &config.Metadata{}, err
-	}
-	metadata.Release.MajorVersion = majorVersion
-
-	minorVersion, err := strconv.Atoi(v.Release.Components[1].AsString())
-	if err != nil {
-		vlog.Error("covert gpdb minor version failed")
-		return &config.Metadata{}, err
-	}
-	metadata.Release.MinorVersion = minorVersion
-
-	patchVersion, err := strconv.Atoi(v.Release.Components[2].AsString())
-	if err != nil {
-		vlog.Error("covert gpdb patch version failed")
-		return &config.Metadata{}, err
-	}
-	metadata.Release.PatchVersion = patchVersion
-
-	r := &metadata.Release
-	r.Id = -1
-
-	releaseType, err := r.ComputeReleaseType()
+	_, err = r.ComputeReleaseType()
 	if err != nil {
 		return &config.Metadata{}, err
 	}
-	metadata.Release.ReleaseType = releaseType
 
-	previousMinorRelease, err := DefaultClient.GetPreviousRelease(r.MajorVersion, config.MinorRelease.String())
+	previousMajorRelease, err := DefaultClient.GetPreviousRelease(r.MajorVersion(), config.MajorRelease.String())
 	if err != nil {
-		vlog.Info("can not find previous minor release: %s", err)
+		vlog.Info(err.Error())
+		previousMajorRelease = nil
+	}
+
+	previousMinorRelease, err := DefaultClient.GetPreviousRelease(r.MajorVersion(), config.MinorRelease.String())
+	if err != nil {
+		vlog.Info(err.Error())
 		previousMinorRelease = nil
 	}
 
-	previousMajorRelease, err := DefaultClient.GetPreviousRelease(r.MajorVersion, config.MajorRelease.String())
-	if err != nil {
-		vlog.Info("can not find previous major release: %s", err)
-		previousMajorRelease = nil
-	}
-	r.PreviousMinorRelease = previousMinorRelease
-	r.PreviousMajorRelease = previousMajorRelease
-
-	endOfSupportDate, err := r.ComputeEndOfSupportDate()
+	_, err = r.ComputeEndOfSupportDate(previousMajorRelease, previousMinorRelease)
 	if err != nil {
 		return &config.Metadata{}, err
 	}
-	metadata.Release.EndOfSupportDate = endOfSupportDate
 
-	metadata.Release.EndOfGuidanceDate = r.ComputeEndOfGuidanceDate()
-	metadata.Release.EndOfAvailabilityDate = r.ComputeEndOfAvailabilityDate()
+	_, err = r.ComputeEndOfGuidanceDate(previousMajorRelease, previousMinorRelease)
+	if err != nil {
+		return &config.Metadata{}, err
+	}
+
+	_ = r.ComputeEndOfAvailabilityDate()
 
 	return &metadata, nil
 }
@@ -491,9 +468,6 @@ func (c *Client) GetPreviousRelease(gpdbMajorVersion int, releaseType string) (r
 	for _, v := range versions {
 		if releaseType == versionMap[v.AsString()].ReleaseType {
 			previousRelease := versionMap[v.AsString()]
-			majorVersion, _ := strconv.Atoi(v.Release.Components[0].AsString())
-			minorVersion, _ := strconv.Atoi(v.Release.Components[1].AsString())
-			patchVersion, _ := strconv.Atoi(v.Release.Components[2].AsString())
 			release := config.Release{
 				ReleaseType:           previousRelease.ReleaseType,
 				EulaSlug:              previousRelease.Eula.Slug,
@@ -509,9 +483,6 @@ func (c *Client) GetPreviousRelease(gpdbMajorVersion int, releaseType string) (r
 				EndOfAvailabilityDate: previousRelease.EndOfAvailabilityDate,
 				Id:                    previousRelease.Id,
 				Version:               v,
-				MajorVersion:          majorVersion,
-				MinorVersion:          minorVersion,
-				PatchVersion:          patchVersion,
 			}
 			return &release, nil
 		}

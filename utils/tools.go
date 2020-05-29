@@ -96,3 +96,13 @@ func (d Date) MarshalJSON() ([]byte, error) {
 func (d Date) String() string {
 	return d.Time.Format("2006-01-02")
 }
+
+func TestHelper(expectedStringRegexp string) {
+	if err := recover(); err != nil {
+		message := fmt.Sprintf("%v", err)
+		match, err := regexp.Match(expectedStringRegexp, []byte(message))
+		if !match || err != nil {
+			panic("Test failed in test helper function: " + err.Error())
+		}
+	}
+}

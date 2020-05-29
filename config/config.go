@@ -3,7 +3,9 @@ package config
 import (
 	"fmt"
 	"github.com/baotingfang/go-pivnet-client/utils"
+	"github.com/baotingfang/go-pivnet-client/vlog"
 	semver "github.com/cppforlife/go-semi-semantic/version"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -27,66 +29,93 @@ type Release struct {
 	EndOfAvailabilityDate       utils.Date `yaml:"end_of_availability_date,omitempty"`
 	EndOfAvailabilityDateOffset string     `yaml:"end_of_availability_date_offset"`
 
-	Id           int64
-	Version      semver.Version
-	MajorVersion int
-	MinorVersion int
-	PatchVersion int
+	Id      int64
+	Version semver.Version
+}
 
-	PreviousMinorRelease *Release
-	PreviousMajorRelease *Release
+func (r *Release) MajorVersion() int {
+	if len(r.Version.Release.Components) == 0 {
+		vlog.Fatal("can not found gpdb major version.")
+	}
+	majorVersion, _ := strconv.Atoi(r.Version.Release.Components[0].AsString())
+	return majorVersion
+}
+
+func (r *Release) MinorVersion() int {
+	if len(r.Version.Release.Components) < 2 {
+		vlog.Fatal("can not found gpdb minor version.")
+	}
+	minorVersion, _ := strconv.Atoi(r.Version.Release.Components[1].AsString())
+	return minorVersion
+}
+
+func (r *Release) PatchVersion() int {
+	if len(r.Version.Release.Components) < 3 {
+		vlog.Fatal("can not found gpdb patch version.")
+	}
+	patchVersion, _ := strconv.Atoi(r.Version.Release.Components[2].AsString())
+	return patchVersion
 }
 
 func (r *Release) ComputeReleaseType() (string, error) {
-	if r.ReleaseType != COMPUTED {
+	if r.ReleaseType != COMPUTED && !utils.IsEmpty(r.ReleaseType) {
 		return r.ReleaseType, nil
 	}
 
 	if r.Version.PreRelease.Components != nil {
 		for _, p := range r.Version.PreRelease.Components {
 			if strings.Contains(p.AsString(), "alpha") {
+				r.ReleaseType = AlphaRelease.String()
 				return AlphaRelease.String(), nil
 			}
 			if strings.Contains(p.AsString(), "beta") {
+				r.ReleaseType = BetaRelease.String()
 				return BetaRelease.String(), nil
 			}
 		}
 	}
 
 	// gpdb4
-	if r.MajorVersion == 4 {
+	if r.MajorVersion() == 4 {
 		if len(r.Version.Release.Components) != 4 {
 			return "", fmt.Errorf("invalid release version for gpdb4: %s", r.Version)
 		}
-		if r.PatchVersion == 0 {
+
+		// 4.3.33.0, not Patch Version
+		if r.Version.Release.Components[3].AsString() == "0" {
+			r.ReleaseType = MinorRelease.String()
 			return MinorRelease.String(), nil
 		} else {
+			r.ReleaseType = MaintenanceRelease.String()
 			return MaintenanceRelease.String(), nil
 		}
 	}
 
 	// gpdb5 gpdb6
-	if r.MajorVersion == 5 || r.MajorVersion == 6 {
+	if r.MajorVersion() == 5 || r.MajorVersion() == 6 {
 		if len(r.Version.Release.Components) != 3 {
-			return "", fmt.Errorf("invalid release version for gpdb%d: %s", r.MajorVersion, r.Version)
+			return "", fmt.Errorf("invalid release version for gpdb%d: %s", r.MajorVersion(), r.Version)
 		}
 
-		if r.MinorVersion == 0 && r.PatchVersion == 0 {
+		if r.MinorVersion() == 0 && r.PatchVersion() == 0 {
+			r.ReleaseType = MajorRelease.String()
 			return MajorRelease.String(), nil
 		}
 
-		if r.MinorVersion != 0 && r.PatchVersion == 0 {
+		if r.MinorVersion() != 0 && r.PatchVersion() == 0 {
+			r.ReleaseType = MinorRelease.String()
 			return MinorRelease.String(), nil
 		}
 
-		if r.PatchVersion != 0 {
+		if r.PatchVersion() != 0 {
+			r.ReleaseType = MaintenanceRelease.String()
 			return MaintenanceRelease.String(), nil
 		}
 	}
 	return "", fmt.Errorf("invalid gpdb release version: %s", r.Version.String())
 }
 
-func (r *Release) ComputeEndOfSupportDate() (utils.Date, error) {
+func (r *Release) ComputeEndOfSupportDate(previousMajorRelease, previousMinorRelease *Release) (utils.Date, error) {
 	if !r.EndOfSupportDate.IsZero() {
 		return r.EndOfSupportDate, nil
 	}
@@ -95,36 +124,40 @@ func (r *Release) ComputeEndOfSupportDate() (utils.Date, error) {
 		OffsetFromMajorReleaseMonths        = 36
 		OffsetFromCurrentMinorReleaseMonths = 18
 	)
+
 	initReleaseDate := utils.Date{Time: time.Now()}
 	if !r.ReleaseDate.IsZero() {
 		initReleaseDate = r.ReleaseDate
 	}
 
 	if r.ReleaseType == MaintenanceRelease.String() {
-		if r.PreviousMajorRelease == nil {
+		if previousMajorRelease == nil {
 			return utils.Date{},
 				fmt.Errorf("current release type: %s, Can not find the previous minor release", r.ReleaseType)
 		}
-		return utils.EndDayOfCurrentMonth(r.PreviousMinorRelease.ReleaseDate), nil
+		r.EndOfSupportDate = utils.EndDayOfCurrentMonth(previousMinorRelease.ReleaseDate)
+		return r.EndOfSupportDate, nil
 	}
 
 	if r.ReleaseType == MinorRelease.String() {
-		if r.PreviousMajorRelease == nil {
+		if previousMajorRelease == nil {
 			return utils.Date{},
 				fmt.Errorf("current release type: %s, Can not find the previous major release", r.ReleaseType)
 		}
 
 		t1 := utils.Date{
-			Time: r.PreviousMajorRelease.ReleaseDate.AddDate(0, OffsetFromMajorReleaseMonths, 0),
+			Time: previousMajorRelease.ReleaseDate.AddDate(0, OffsetFromMajorReleaseMonths, 0),
 		}
 		t2 := utils.Date{
 			Time: initReleaseDate.AddDate(0, OffsetFromCurrentMinorReleaseMonths, 0),
 		}
 
 		if t1.Time.Before(t2.Time) {
-			return utils.EndDayOfCurrentMonth(t2), nil
+			r.EndOfSupportDate = utils.EndDayOfCurrentMonth(t2)
+			return r.EndOfSupportDate, nil
 		} else {
-			return utils.EndDayOfCurrentMonth(t1), nil
+			r.EndOfSupportDate = utils.EndDayOfCurrentMonth(t1)
+			return r.EndOfSupportDate, nil
 		}
 	}
 
@@ -134,17 +167,30 @@ func (r *Release) ComputeEndOfSupportDate() (utils.Date, error) {
 		t1 := utils.Date{
 			Time: initReleaseDate.AddDate(0, OffsetFromMajorReleaseMonths, 0),
 		}
-		return utils.EndDayOfCurrentMonth(t1), nil
+		r.EndOfSupportDate = utils.EndDayOfCurrentMonth(t1)
+		return r.EndOfSupportDate, nil
 	}
 	return utils.Date{}, fmt.Errorf("invalid release type: %s", r.ReleaseType)
 }
 
-func (r *Release) ComputeEndOfGuidanceDate() utils.Date {
+func (r *Release) ComputeEndOfGuidanceDate(previousMajorRelease, previousMinorRelease *Release) (utils.Date, error) {
 	if !r.EndOfGuidanceDate.IsZero() {
-		return r.EndOfGuidanceDate
+		return r.EndOfGuidanceDate, nil
 	}
+
+	if r.EndOfSupportDate.IsZero() {
+		endOfSupportDate, err := r.ComputeEndOfSupportDate(previousMajorRelease, previousMinorRelease)
+		if err != nil {
+			return endOfSupportDate, err
+		}
+		r.EndOfSupportDate = endOfSupportDate
+	}
+
 	const OffsetFromEndOfSupportDate = 12
-	return utils.Date{Time: r.EndOfSupportDate.AddDate(0, OffsetFromEndOfSupportDate, 0)}
+	r.EndOfGuidanceDate = utils.Date{
+		Time: r.EndOfSupportDate.AddDate(0, OffsetFromEndOfSupportDate, 0),
+	}
+	return r.EndOfGuidanceDate, nil
 }
 
 func (r *Release) ComputeEndOfAvailabilityDate() utils.Date {
@@ -157,7 +203,8 @@ func (r *Release) ComputeEndOfAvailabilityDate() utils.Date {
 		initReleaseDate = r.ReleaseDate
 	}
 
-	return utils.ComputeFromOffset(initReleaseDate, r.EndOfAvailabilityDateOffset)
+	r.EndOfAvailabilityDate = utils.ComputeFromOffset(initReleaseDate, r.EndOfAvailabilityDateOffset)
+	return r.EndOfAvailabilityDate
 }
 
 func (r *Release) ComputeReleaseNotesUrl() (string, error) {
@@ -165,17 +212,18 @@ func (r *Release) ComputeReleaseNotesUrl() (string, error) {
 		return r.ReleaseNotesUrl, nil
 	}
 
-	if r.MajorVersion == 6 {
+	if r.MajorVersion() == 6 {
 		return generateGpdb6ReleaseNotesUrl(r.Version), nil
 	}
 
-	if r.MajorVersion == 5 {
+	if r.MajorVersion() == 5 {
 		return generateGpdb5ReleaseNotesUrl(r.Version), nil
 	}
 
-	if r.MajorVersion == 4 {
+	if r.MajorVersion() == 4 {
 		return generateGpdb4ReleaseNotesUrl(r.Version), nil
 	}
+
 	return "", fmt.Errorf("compute release notes url faild. only support gpdb4/5/6")
 
 }

@@ -76,8 +76,7 @@ func (l Logger) Warn(s string, i ...interface{}) {
 func (l Logger) Fatal(s string, i ...interface{}) {
 	header := getLogPrefixHeader(l.Prefix, "FATAL")
 	message := fmt.Sprintf(header, fmt.Sprintf(s, i...))
-	l.ErrLogger.Println(message)
-	os.Exit(1)
+	panic(message)
 }
 
 func Error(s string, i ...interface{}) {
